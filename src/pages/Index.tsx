@@ -1,7 +1,7 @@
-import ContactForm from "@/components/ContactForm";
+import { FormSelector } from "@/components/FormSelector";
 
 const Index = () => {
-  return <ContactForm />;
+  return <FormSelector />;
 };
 
 export default Index;
