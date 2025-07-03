@@ -24,6 +24,7 @@ const formOptions = [
 ];
 
 export const FormSelector = () => {
+  console.log("FormSelector component is rendering");
   const [selectedSchema, setSelectedSchema] = useState<FormSchema | null>(null);
 
   if (selectedSchema) {
