@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -6,7 +6,10 @@ import { FormSchema } from "@/types/form";
 import { DynamicField } from "@/components/DynamicField";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { useAIValidation } from "@/hooks/useAIValidation";
+import { Brain, CheckCircle, AlertTriangle, Info } from "lucide-react";
 
 interface DynamicFormRendererProps {
   schema: FormSchema;
@@ -72,7 +75,9 @@ const createValidationSchema = (schema: FormSchema) => {
 
 export const DynamicFormRenderer = ({ schema, onSubmit }: DynamicFormRendererProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [aiValidationResults, setAiValidationResults] = useState<any>(null);
   const { toast } = useToast();
+  const { validateWithAI, isValidating, suggestions } = useAIValidation();
 
   const validationSchema = createValidationSchema(schema);
   
@@ -81,30 +86,68 @@ export const DynamicFormRenderer = ({ schema, onSubmit }: DynamicFormRendererPro
     handleSubmit,
     reset,
     control,
+    watch,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(validationSchema),
   });
 
+  const formData = watch();
+
+  // AI validation on form data changes
+  useEffect(() => {
+    const timeoutId = setTimeout(async () => {
+      if (Object.keys(formData).length > 0) {
+        const results = await validateWithAI(formData, schema.fields);
+        setAiValidationResults(results);
+      }
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
+  }, [formData, validateWithAI, schema.fields]);
+
   const handleFormSubmit = async (data: Record<string, any>) => {
     setIsSubmitting(true);
+    
+    // Final AI validation before submission
+    const finalValidation = await validateWithAI(data, schema.fields);
+    
+    if (!finalValidation.isValid) {
+      toast({
+        title: "Validation Issues",
+        description: "Please address the validation issues before submitting.",
+        variant: "destructive",
+      });
+      setIsSubmitting(false);
+      return;
+    }
     
     // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1000));
     
     console.log("Form submitted:", data);
+    console.log("AI Validation Confidence:", finalValidation.confidence);
     
     if (onSubmit) {
       onSubmit(data);
     } else {
       toast({
         title: "Success!",
-        description: "Form has been submitted successfully.",
+        description: `Form submitted with ${Math.round(finalValidation.confidence * 100)}% AI confidence.`,
       });
     }
     
     reset();
     setIsSubmitting(false);
+  };
+
+  const getSeverityIcon = (severity: string) => {
+    switch (severity) {
+      case 'error': return <AlertTriangle className="w-4 h-4 text-destructive" />;
+      case 'warning': return <AlertTriangle className="w-4 h-4 text-yellow-500" />;
+      case 'info': return <Info className="w-4 h-4 text-blue-500" />;
+      default: return <CheckCircle className="w-4 h-4 text-green-500" />;
+    }
   };
 
   return (
@@ -121,6 +164,48 @@ export const DynamicFormRenderer = ({ schema, onSubmit }: DynamicFormRendererPro
           )}
         </CardHeader>
         <CardContent>
+          {/* AI Validation Status */}
+          {(isValidating || aiValidationResults) && (
+            <Card className="mb-6 border-border/50 bg-muted/50">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Brain className="w-5 h-5 text-primary" />
+                  <span className="font-medium">AI Validation</span>
+                  {isValidating && (
+                    <Badge variant="secondary" className="animate-pulse">
+                      Analyzing...
+                    </Badge>
+                  )}
+                  {aiValidationResults && (
+                    <Badge 
+                      variant={aiValidationResults.isValid ? "default" : "destructive"}
+                    >
+                      {Math.round(aiValidationResults.confidence * 100)}% Confidence
+                    </Badge>
+                  )}
+                </div>
+                
+                {suggestions.length > 0 && (
+                  <div className="space-y-2">
+                    {suggestions.map((suggestion, index) => (
+                      <div key={index} className="flex items-start gap-2 p-2 rounded bg-background/50">
+                        {getSeverityIcon(suggestion.severity)}
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">
+                            {schema.fields.find(f => f.id === suggestion.field)?.label}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {suggestion.suggestion}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
             {schema.fields.map((field) => (
               <DynamicField
@@ -134,10 +219,12 @@ export const DynamicFormRenderer = ({ schema, onSubmit }: DynamicFormRendererPro
 
             <Button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isValidating}
               className="w-full bg-gradient-primary hover:shadow-glow transition-all duration-300 font-semibold"
             >
-              {isSubmitting ? "Submitting..." : (schema.submitLabel || "Submit")}
+              {isSubmitting ? "Submitting..." : 
+               isValidating ? "AI Validating..." : 
+               (schema.submitLabel || "Submit")}
             </Button>
           </form>
         </CardContent>

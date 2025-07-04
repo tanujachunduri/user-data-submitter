@@ -23,7 +23,11 @@ const formOptions = [
   },
 ];
 
-export const FormSelector = () => {
+interface FormSelectorProps {
+  onShowBuilder?: () => void;
+}
+
+export const FormSelector = ({ onShowBuilder }: FormSelectorProps) => {
   const [selectedSchema, setSelectedSchema] = useState<FormSchema | null>(null);
 
   if (selectedSchema) {
@@ -53,11 +57,20 @@ export const FormSelector = () => {
       <div className="w-full max-w-4xl">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-4">
-            Dynamic Form Renderer
+            Smart Dynamic Form System
           </h1>
-          <p className="text-muted-foreground text-lg">
-            Choose a form template to see the dynamic form rendering in action
+          <p className="text-muted-foreground text-lg mb-4">
+            Choose a template or create your own intelligent form with AI validation
           </p>
+          
+          <div className="flex gap-4 justify-center">
+            <Button 
+              onClick={onShowBuilder}
+              className="bg-gradient-primary hover:shadow-glow transition-all duration-300"
+            >
+              🧠 Create Smart Form
+            </Button>
+          </div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
