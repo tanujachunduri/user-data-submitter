@@ -1,21 +1,18 @@
 export interface FormField {
   id: string;
-  type: 'text' | 'email' | 'number' | 'textarea' | 'select' | 'checkbox' | 'radio';
+  type: 'text' | 'email' | 'textarea' | 'select' | 'checkbox' | 'number' | 'date';
   label: string;
   placeholder?: string;
   required?: boolean;
   validation?: {
+    minLength?: number;
+    maxLength?: number;
+    pattern?: string;
     min?: number;
     max?: number;
-    pattern?: string;
-    custom?: string;
   };
   options?: { value: string; label: string }[];
-  aiSuggestions?: {
-    validationType: string;
-    suggestion: string;
-    confidence: number;
-  }[];
+  icon?: string;
 }
 
 export interface FormSchema {
@@ -23,16 +20,5 @@ export interface FormSchema {
   title: string;
   description?: string;
   fields: FormField[];
-  aiValidation?: {
-    enabled: boolean;
-    rules: string[];
-  };
-}
-
-export interface AIValidationResult {
-  field: string;
-  isValid: boolean;
-  suggestion?: string;
-  confidence: number;
-  rule: string;
+  submitLabel?: string;
 }
