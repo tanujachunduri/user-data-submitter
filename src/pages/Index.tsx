@@ -1,8 +1,7 @@
-import { FormSelector } from "@/components/FormSelector";
+import ContactForm from "@/components/ContactForm";
 
 const Index = () => {
-  console.log("Index component is rendering");
-  return <FormSelector />;
+  return <ContactForm />;
 };
 
 export default Index;
